@@ -7,20 +7,24 @@ import java.net.*;
 public class HTTPRangeGetter implements Runnable {
 
     private final String REQUEST_TYPE = "Range";
-    private int chunkIndex;
     private String serverAddress;
+    private int chunkIndex;
     private ChunkManager chunkManager;
+    private ChunkQueue chunkQueue;
 
     /**
      * Initializes a HTTP getters object.
      * @param address - the server's URL address from which the getter will download.
      * @param chunkIndex - the index of the chunk to be downloaded by this getter.
      * @param chunkManager - reference to object tracking the chunk downloaded.
+     * @param chunkQueue - reference to synchronous queue handling completed chunks.
      */
-    public HTTPRangeGetter(String address, int chunkIndex, ChunkManager chunkManager) {
+    public HTTPRangeGetter(String address, int chunkIndex,
+                           ChunkManager chunkManager, ChunkQueue chunkQueue) {
         this.serverAddress = address;
         this.chunkIndex = chunkIndex;
         this.chunkManager = chunkManager;
+        this.chunkQueue = chunkQueue;
     }
 
     /**
@@ -32,12 +36,11 @@ public class HTTPRangeGetter implements Runnable {
         HttpURLConnection connection = this.initConnection();
         byte[] downloadedData = this.downloadChunk(connection);
         this.saveDownloadedData(downloadedData);
-        // 3. Add chunk to ChunkQueue
     }
 
     /**
      * Establishing a HTTP connection to the server for downloading the data.
-     * @return
+     * @return a HTTP connection to the server.
      */
     private HttpURLConnection initConnection() {
         HttpURLConnection connection = null;
@@ -98,12 +101,14 @@ public class HTTPRangeGetter implements Runnable {
     }
 
     /**
-     * Creates a new Chunk object with the given downloaded data, and
-     * stores it at the chunks table in the correct index.
+     * Creates a new Chunk object with the given downloaded data,
+     * stores it at the chunks table in the correct index, and adding it
+     * to the queue of the chunks waiting to be written to file.
      * @param downloadedData - the data downloaded by this getters.
      */
     private void saveDownloadedData(byte[] downloadedData) {
         Chunk c = new Chunk(downloadedData);
         this.chunkManager.setChunkAt(this.chunkIndex, c);
+        this.chunkQueue.add(c);
     }
 }

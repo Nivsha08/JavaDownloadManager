@@ -2,6 +2,7 @@ import fileDownloaders.HTTPRangeGetter;
 import inputHandlers.ProgramInput;
 import models.Chunk;
 import models.ChunkManager;
+import models.ChunkQueue;
 
 import java.io.IOException;
 import java.net.*;
@@ -13,6 +14,7 @@ public class DownloadManager {
     private ThreadPoolExecutor threadPool;
     private ArrayList<String> serverList;
     private ChunkManager chunkManager = null;
+    private ChunkQueue chunkQueue = null;
     private long fileSize;
 
     /**
@@ -24,6 +26,7 @@ public class DownloadManager {
 
         this.initThreads(userInput.getMaxConnections());
         this.initChunkManager(this.fileSize);
+        this.initChunkQueue();
         this.initConnections();
     }
 
@@ -44,15 +47,23 @@ public class DownloadManager {
     }
 
     /**
+     * Creates a blocking synchronous queue for handling the completed chunks
+     * waiting to be written to file.
+     */
+    private void initChunkQueue() {
+        this.chunkQueue = new ChunkQueue();
+    }
+
+    /**
      * Initializing the required number of connections and start downloading the file.
      */
     private void initConnections() {
         int chunkCount = this.chunkManager.getChunksCount();
 
         // todo: add support for different range from different servers
-        for (int i = 0; i < 7; i++) { //todo: change loop limit to chunkCount
-            HTTPRangeGetter getter =
-                    new HTTPRangeGetter(this.serverList.get(0), i, this.chunkManager);
+        //todo: change loop limit to chunkCount
+        for (int i = 0; i < 7; i++) {
+            HTTPRangeGetter getter = this.createGetter(i);
             this.threadPool.execute(getter);
         }
 
@@ -86,10 +97,21 @@ public class DownloadManager {
     }
 
     /**
+     * Creates a HTTPRangeGetter object responsible for
+     * downloading chunk number <chunkIndex>.
+     * @param chunkIndex - the number of chunk to be downloaded from the file.
+     * @return a HTTPRangeGetter obejct.
+     */
+    private HTTPRangeGetter createGetter(int chunkIndex) {
+        return new HTTPRangeGetter(
+                this.serverList.get(0), chunkIndex, this.chunkManager, this.chunkQueue);
+    }
+
+    /**
      * Kill all existing connection and terminate the download manager execution.
      */
     private void terminateConnections() {
-        // maybe ensure download is completed before killing connections?
+        // todo: maybe ensure download is completed before killing connections?
         this.threadPool.shutdown();
     }
 
