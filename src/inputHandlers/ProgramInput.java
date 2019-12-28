@@ -1,11 +1,20 @@
-package InputHandlers;
+package inputHandlers;
 
 import java.util.ArrayList;
 
 public class ProgramInput {
 
+    private int maxConnections;
     private ArrayList<String> serverList;
-    private int maxConnections = 1;
+
+
+    public ArrayList<String> getServerList() {
+        return serverList;
+    }
+
+    public int getMaxConnections() {
+        return maxConnections;
+    }
 
     /**
      * An compound object contains the parsed user arguments.

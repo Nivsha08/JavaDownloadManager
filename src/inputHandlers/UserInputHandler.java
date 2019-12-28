@@ -1,4 +1,4 @@
-package InputHandlers;
+package inputHandlers;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -14,8 +14,12 @@ public class UserInputHandler {
      * @return ProgramInput object.
      */
     public static ProgramInput parseArguments(String[] args) {
+        int maxConnection = 1; // set default number of connections to 1
         ArrayList<String> serverList = getServerAddresses(args[0]);
-        int maxConnection = Integer.parseInt(args[1]);
+
+        if (args.length > 1) {
+            maxConnection = Integer.parseInt(args[1]);
+        }
 
         return new ProgramInput(serverList, maxConnection);
     }
