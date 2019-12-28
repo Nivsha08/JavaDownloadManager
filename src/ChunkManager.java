@@ -7,6 +7,10 @@ public class ChunkManager {
         this.chunkTable = new Chunk[tableSize];
     }
 
+    public int getChunksCount() {
+        return this.chunkTable.length;
+    }
+
     public Chunk getChunkAt(int index) {
         return this.chunkTable[index];
     }

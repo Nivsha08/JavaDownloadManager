@@ -60,7 +60,7 @@ public class UserInputHandler {
             }
         }
         catch (IOException e) {
-            System.err.println("Unable to server list file");
+            System.err.println("Download failed.\nUnable to server list file");
             System.err.println(e);
         }
 

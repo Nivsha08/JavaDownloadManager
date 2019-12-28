@@ -7,6 +7,6 @@ import inputHandlers.UserInputHandler;
 public class Main {
     public static void main(String[] args) {
         ProgramInput programInput = UserInputHandler.parseArguments(args);
-        System.out.println(programInput);
+        DownloadManager downloadManager = new DownloadManager(programInput);
     }
 }

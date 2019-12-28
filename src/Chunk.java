@@ -1,6 +1,6 @@
 public class Chunk {
 
-    public static final long CHUNK_SIZE = 64; // chunk size in KB
+    public static final long CHUNK_SIZE = 64000; // chunk size in bytes
     private byte[] data;
     private boolean isCompleted;
 
