@@ -1,13 +1,12 @@
 import fileDownloaders.HTTPRangeGetter;
 import inputHandlers.ProgramInput;
+import models.Chunk;
+import models.ChunkManager;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class DownloadManager {
 
@@ -17,39 +16,54 @@ public class DownloadManager {
     private long fileSize;
 
     /**
-     * Initialize a thread pool with the given <n> </n>number of connections.
-     * Creates an array of Chunks objects, initially empty.
-     * Initializing <n> threads to handle different areas of the array.
-     * @param userInput
+     * Creates the download manager object.
      */
     public DownloadManager(ProgramInput userInput) {
-        this.initDownloadManager(userInput);
+        this.serverList = userInput.getServerList();
+        this.fileSize = this.getFileSize();
+
+        this.initThreads(userInput.getMaxConnections());
         this.initChunkManager(this.fileSize);
         this.initConnections();
     }
 
-    private void initDownloadManager(ProgramInput userInput) {
-        int maxConnections = userInput.getMaxConnections();
-        this.threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxConnections);
-        this.serverList = userInput.getServerList();
-        this.fileSize = this.getFileSize();
+    /**
+     * Initialize a ThreadPool object with the given number of connections.
+     * @param n - the required number of connections.
+     */
+    private void initThreads(int n) {
+        this.threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(n);
     }
 
+    /**
+     * Creates an array of Chunks objects, initially empty.
+     * @param fileSize - the desired file size, in bytes.
+     */
     private void initChunkManager(long fileSize) {
         this.chunkManager = new ChunkManager(fileSize, Chunk.CHUNK_SIZE);
     }
 
+    /**
+     * Initializing the required number of connections and start downloading the file.
+     */
     private void initConnections() {
         int chunkCount = this.chunkManager.getChunksCount();
 
-        for (int i = 0; i < chunkCount; i++) {
-            HTTPRangeGetter getter = new HTTPRangeGetter(i);
+        // todo: add support for different range from different servers
+        for (int i = 0; i < 7; i++) { //todo: change loop limit to chunkCount
+            HTTPRangeGetter getter =
+                    new HTTPRangeGetter(this.serverList.get(0), i, this.chunkManager);
             this.threadPool.execute(getter);
         }
 
         this.terminateConnections();
     }
 
+    /**
+     * Establish a URL connection to one of the servers and fetch the total
+     * desired file size in bytes.
+     * @return File size in bytes.
+     */
     private long getFileSize() {
         long fileSize = 0;
         try {
@@ -71,20 +85,12 @@ public class DownloadManager {
         return fileSize;
     }
 
+    /**
+     * Kill all existing connection and terminate the download manager execution.
+     */
     private void terminateConnections() {
         // maybe ensure download is completed before killing connections?
         this.threadPool.shutdown();
     }
 
 }
-
-
-
-
-//for (chunkTable) {
-//
-//    downaload(i)
-//        }
-//
-//data = getData(start: i * chunk size, i * chunksize + chunksize)
-//table[i] = new Chunk(data)
