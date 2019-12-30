@@ -1,10 +1,8 @@
-import fileDownloaders.HTTPRangeGetter;
-import fileWriters.ChunkWriter;
-import inputHandlers.ProgramInput;
-import models.Chunk;
-import models.ChunkManager;
-import models.ChunkQueue;
-import models.ChunkRange;
+import models.*;
+import readers.HTTPRangeGetter;
+import writers.ChunkWriter;
+import ioHandlers.ProgramInput;
+import ioHandlers.ProgramPrinter;
 
 import java.io.IOException;
 import java.net.*;
@@ -14,23 +12,39 @@ import java.util.concurrent.*;
 
 public class DownloadManager {
 
-    private ThreadPoolExecutor threadPool;
+    private String fileName;
+    private long fileSize;
     private ArrayList<String> serverList;
+    private ThreadPoolExecutor threadPool;
     private ChunkManager chunkManager = null;
     private ChunkWriter chunkWriter = null;
     private ChunkQueue chunkQueue = null;
-    private String fileName;
-    private long fileSize;
+    private DownloadStatus downloadStatus;
 
     /**
      * Creates the download manager object.
      */
     public DownloadManager(ProgramInput userInput) {
-        this.serverList = userInput.getServerList();
-        this.fileSize = this.getFileSize();
-        this.fileName = this.getFileName();
-        System.out.println(fileName);
+        populateProperties(userInput);
         this.initThreads(userInput.getMaxConnections());
+        initDownload();
+    }
+
+    /**
+     * Populate download manager fields by the user input.
+     * @param userInput
+     */
+    private void populateProperties(ProgramInput userInput) {
+        this.serverList = userInput.getServerList();
+        this.fileName = userInput.getFileName();
+        this.fileSize = this.getFileSize();
+        this.downloadStatus = new DownloadStatus(this.fileSize);
+    }
+
+    /**
+     * Initialize the object managing the different download parts.
+     */
+    private void initDownload() {
         this.initChunkManager(this.fileSize);
         this.initChunkQueue();
         this.initConnections();
@@ -66,7 +80,8 @@ public class DownloadManager {
      */
     private void initChunkWriter() {
         String currentDirPath = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
-        this.chunkWriter = new ChunkWriter(currentDirPath, this.fileName, this.chunkQueue);
+        this.chunkWriter = new ChunkWriter(currentDirPath, this.fileName,
+                this.chunkQueue, this.downloadStatus);
         Thread writerThread = new Thread(this.chunkWriter);
         writerThread.start();
     }
@@ -78,7 +93,6 @@ public class DownloadManager {
         int chunkCount = this.chunkManager.getChunksCount();
 
         // todo: add support for different range from different servers
-        //todo: change loop limit to chunkCount
         for (int i = 0; i < chunkCount; i++) {
             ChunkRange range = this.calculateChunkByteRange(i, chunkCount);
             HTTPRangeGetter getter = this.createGetter(i, range);
@@ -87,13 +101,14 @@ public class DownloadManager {
         this.terminateConnections();
     }
 
+    /**
+     * Calculate the range for the current chunk to download from the source file.
+     * @param chunkIndex - the chunk's index in the source file.
+     * @param chunkCount - the total chunk count.
+     * @return ChunkRange object.
+     */
     private ChunkRange calculateChunkByteRange(int chunkIndex, int chunkCount) {
         return new ChunkRange(chunkIndex, this.fileSize, chunkCount);
-    }
-
-    private String getFileName() {
-        int lastBackslashPos = this.serverList.get(0).lastIndexOf('/');
-        return this.serverList.get(0).substring(lastBackslashPos + 1);
     }
 
     /**
@@ -111,12 +126,10 @@ public class DownloadManager {
             connection.disconnect();
         }
         catch (MalformedURLException e) {
-            System.err.println("Download failed.\nInvalid URL address.");
-            System.err.println(e);
+            ProgramPrinter.printError("Invalid URL address given as input.", e);
         }
         catch (IOException e) {
-            System.err.println("Download failed.\nUnable to calculate file size.");
-            System.err.println(e);
+            ProgramPrinter.printError("Unable to get the total size of the source file.", e);
         }
 
         return fileSize;

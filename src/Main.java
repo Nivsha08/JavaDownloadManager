@@ -1,5 +1,5 @@
-import inputHandlers.ProgramInput;
-import inputHandlers.UserInputHandler;
+import ioHandlers.ProgramInput;
+import ioHandlers.UserInputHandler;
 
 /**
  * Entry point for the entire program.

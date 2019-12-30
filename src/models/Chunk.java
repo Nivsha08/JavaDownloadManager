@@ -4,7 +4,7 @@ public class Chunk {
 
     public static final int CHUNK_SIZE = 128000; // chunk size in bytes
     private byte[] data;
-    private long startPosition;
+    private ChunkRange range;
     private boolean isCompleted;
 
     /**
@@ -12,9 +12,9 @@ public class Chunk {
      * a status indicating whether it was downloaded or not.
      * @param chunkData
      */
-    public Chunk(byte[] chunkData, long startPosition) {
+    public Chunk(byte[] chunkData, ChunkRange range) {
         this.data = chunkData;
-        this.startPosition = startPosition;
+        this.range = range;
     }
 
     /* GETTERS & SETTERS */
@@ -32,6 +32,8 @@ public class Chunk {
     }
 
     public long getStartPosition() {
-        return this.startPosition;
+        return this.range.start();
     }
+
+    public long getSize() { return this.data.length; }
 }

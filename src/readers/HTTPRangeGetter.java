@@ -1,5 +1,6 @@
-package fileDownloaders;
+package readers;
 
+import ioHandlers.ProgramPrinter;
 import models.*;
 import java.io.*;
 import java.net.*;
@@ -16,6 +17,7 @@ public class HTTPRangeGetter implements Runnable {
     /**
      * Initializes a HTTP getters object.
      * @param address - the server's URL address from which the getter will download.
+     * @param range - ChunkRange object to hold the download range for this getter.
      * @param chunkIndex - the index of the chunk to be downloaded by this getter.
      * @param chunkManager - reference to object tracking the chunk downloaded.
      * @param chunkQueue - reference to synchronous queue handling completed chunks.
@@ -34,10 +36,10 @@ public class HTTPRangeGetter implements Runnable {
      */
     @Override
     public void run() {
-        System.out.println("getter downloading chunk number: " + this.chunkIndex);
+//        System.out.println("getter downloading chunk number: " + this.chunkIndex);
         this.chunkQueue.registerProducer();
         HttpURLConnection connection = this.initConnection();
-        System.out.println("chunk number " + this.chunkIndex + " downloads:" + this.range.start() + "-" + this.range.end());
+//        System.out.println("chunk number " + this.chunkIndex + " downloads:" + this.range.start() + "-" + this.range.end());
         byte[] downloadedData = this.downloadChunk(connection);
         this.saveDownloadedData(downloadedData);
         this.chunkQueue.unregisterProducer();
@@ -54,12 +56,11 @@ public class HTTPRangeGetter implements Runnable {
             connection = (HttpURLConnection) url.openConnection();
         }
         catch (MalformedURLException e) {
-            e.printStackTrace();
+            ProgramPrinter.printError("Invalid URL address given as input.", e);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            ProgramPrinter.printError("Unable to establish the URL connection.", e);
         }
-
         return connection;
     }
 
@@ -70,7 +71,7 @@ public class HTTPRangeGetter implements Runnable {
      * @return A byte array with the downloaded data.
      */
     private byte[] downloadChunk(HttpURLConnection connection) {
-        String byteRange = String.format("bytes=%d-%d", this.range.start(), this.range.end());
+        String byteRange = this.range.httpByteRange();
         connection.setRequestProperty(REQUEST_TYPE, byteRange);
 
         try {
@@ -78,7 +79,7 @@ public class HTTPRangeGetter implements Runnable {
             return this.readByteRange(connectionInputStream);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            ProgramPrinter.printError("Failed to read the source file input stream.", e);
         }
 
         return null;
@@ -98,7 +99,7 @@ public class HTTPRangeGetter implements Runnable {
             reader.read(result, 0, rangeSize);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            ProgramPrinter.printError("Failed to read from the source file.", e);
         }
 
         return result;
@@ -112,13 +113,14 @@ public class HTTPRangeGetter implements Runnable {
      */
     private void saveDownloadedData(byte[] downloadedData) {
         try {
-            Chunk c = new Chunk(downloadedData, this.range.start());
+            Chunk c = new Chunk(downloadedData, this.range);
             this.chunkManager.setChunkAt(this.chunkIndex, c);
             this.chunkQueue.put(c);
             Thread.sleep(200); //todo: document
         }
         catch (InterruptedException e) {
-            e.printStackTrace();
+            ProgramPrinter.printError(
+                    "Failed to store a portion of the data downloaded from the source file.", e);
         }
     }
 

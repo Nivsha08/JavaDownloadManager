@@ -1,4 +1,4 @@
-package inputHandlers;
+package ioHandlers;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -37,7 +37,8 @@ public class UserInputHandler {
 
         if (isURL) {
             result.add(address);
-        } else {
+        }
+        else {
             result = readServerList(address);
         }
 
@@ -60,8 +61,7 @@ public class UserInputHandler {
             }
         }
         catch (IOException e) {
-            System.err.println("Download failed.\nUnable to server list file");
-            System.err.println(e);
+            ProgramPrinter.printError("Unable to read server list file.", e);
         }
 
         return result;
