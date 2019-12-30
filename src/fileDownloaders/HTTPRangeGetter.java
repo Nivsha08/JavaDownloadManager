@@ -9,6 +9,7 @@ public class HTTPRangeGetter implements Runnable {
     private final String REQUEST_TYPE = "Range";
     private String serverAddress;
     private int chunkIndex;
+    private ChunkRange range;
     private ChunkManager chunkManager;
     private ChunkQueue chunkQueue;
 
@@ -19,10 +20,11 @@ public class HTTPRangeGetter implements Runnable {
      * @param chunkManager - reference to object tracking the chunk downloaded.
      * @param chunkQueue - reference to synchronous queue handling completed chunks.
      */
-    public HTTPRangeGetter(String address, int chunkIndex,
+    public HTTPRangeGetter(String address, ChunkRange range, int chunkIndex,
                            ChunkManager chunkManager, ChunkQueue chunkQueue) {
         this.serverAddress = address;
         this.chunkIndex = chunkIndex;
+        this.range = range;
         this.chunkManager = chunkManager;
         this.chunkQueue = chunkQueue;
     }
@@ -33,9 +35,12 @@ public class HTTPRangeGetter implements Runnable {
     @Override
     public void run() {
         System.out.println("getter downloading chunk number: " + this.chunkIndex);
+        this.chunkQueue.registerProducer();
         HttpURLConnection connection = this.initConnection();
+        System.out.println("chunk number " + this.chunkIndex + " downloads:" + this.range.start() + "-" + this.range.end());
         byte[] downloadedData = this.downloadChunk(connection);
         this.saveDownloadedData(downloadedData);
+        this.chunkQueue.unregisterProducer();
     }
 
     /**
@@ -65,9 +70,7 @@ public class HTTPRangeGetter implements Runnable {
      * @return A byte array with the downloaded data.
      */
     private byte[] downloadChunk(HttpURLConnection connection) {
-        long rangeStart = chunkIndex * Chunk.CHUNK_SIZE;
-        long rangeEnd = rangeStart + Chunk.CHUNK_SIZE - 1;
-        String byteRange = String.format("bytes=%d-%d", rangeStart, rangeEnd);
+        String byteRange = String.format("bytes=%d-%d", this.range.start(), this.range.end());
         connection.setRequestProperty(REQUEST_TYPE, byteRange);
 
         try {
@@ -87,11 +90,12 @@ public class HTTPRangeGetter implements Runnable {
      * @return a byte array with the downloaded data.
      */
     private byte[] readByteRange(InputStream connectionInputStream) {
-        byte[] result = new byte[Chunk.CHUNK_SIZE];
+        int rangeSize = (int)this.range.size();
+        byte[] result = new byte[rangeSize];
 
         try {
             BufferedInputStream reader = new BufferedInputStream(connectionInputStream);
-            reader.read(result, 0, Chunk.CHUNK_SIZE);
+            reader.read(result, 0, rangeSize);
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -107,8 +111,15 @@ public class HTTPRangeGetter implements Runnable {
      * @param downloadedData - the data downloaded by this getters.
      */
     private void saveDownloadedData(byte[] downloadedData) {
-        Chunk c = new Chunk(downloadedData);
-        this.chunkManager.setChunkAt(this.chunkIndex, c);
-        this.chunkQueue.add(c);
+        try {
+            Chunk c = new Chunk(downloadedData, this.range.start());
+            this.chunkManager.setChunkAt(this.chunkIndex, c);
+            this.chunkQueue.put(c);
+            Thread.sleep(200); //todo: document
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
+
 }

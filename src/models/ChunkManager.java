@@ -10,7 +10,7 @@ public class ChunkManager {
      * @param chunkSize - the constant chunk size in bytes.
      */
     public ChunkManager(long fileSize, long chunkSize) {
-        int tableSize = (int)Math.ceil(fileSize / chunkSize);
+        int tableSize = (int)Math.ceil((double)fileSize / chunkSize);
         this.chunkTable = new Chunk[tableSize];
     }
 

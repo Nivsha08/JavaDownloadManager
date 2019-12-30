@@ -7,7 +7,6 @@ public class ProgramInput {
     private int maxConnections;
     private ArrayList<String> serverList;
 
-
     public ArrayList<String> getServerList() {
         return serverList;
     }

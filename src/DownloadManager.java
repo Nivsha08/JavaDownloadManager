@@ -1,11 +1,14 @@
 import fileDownloaders.HTTPRangeGetter;
+import fileWriters.ChunkWriter;
 import inputHandlers.ProgramInput;
 import models.Chunk;
 import models.ChunkManager;
 import models.ChunkQueue;
+import models.ChunkRange;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.file.FileSystems;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -14,7 +17,9 @@ public class DownloadManager {
     private ThreadPoolExecutor threadPool;
     private ArrayList<String> serverList;
     private ChunkManager chunkManager = null;
+    private ChunkWriter chunkWriter = null;
     private ChunkQueue chunkQueue = null;
+    private String fileName;
     private long fileSize;
 
     /**
@@ -23,11 +28,13 @@ public class DownloadManager {
     public DownloadManager(ProgramInput userInput) {
         this.serverList = userInput.getServerList();
         this.fileSize = this.getFileSize();
-
+        this.fileName = this.getFileName();
+        System.out.println(fileName);
         this.initThreads(userInput.getMaxConnections());
         this.initChunkManager(this.fileSize);
         this.initChunkQueue();
         this.initConnections();
+        this.initChunkWriter();
     }
 
     /**
@@ -55,6 +62,16 @@ public class DownloadManager {
     }
 
     /**
+     * Initialize a ChunkWriter object to register to the queue.
+     */
+    private void initChunkWriter() {
+        String currentDirPath = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
+        this.chunkWriter = new ChunkWriter(currentDirPath, this.fileName, this.chunkQueue);
+        Thread writerThread = new Thread(this.chunkWriter);
+        writerThread.start();
+    }
+
+    /**
      * Initializing the required number of connections and start downloading the file.
      */
     private void initConnections() {
@@ -62,12 +79,21 @@ public class DownloadManager {
 
         // todo: add support for different range from different servers
         //todo: change loop limit to chunkCount
-        for (int i = 0; i < 7; i++) {
-            HTTPRangeGetter getter = this.createGetter(i);
+        for (int i = 0; i < chunkCount; i++) {
+            ChunkRange range = this.calculateChunkByteRange(i, chunkCount);
+            HTTPRangeGetter getter = this.createGetter(i, range);
             this.threadPool.execute(getter);
         }
-
         this.terminateConnections();
+    }
+
+    private ChunkRange calculateChunkByteRange(int chunkIndex, int chunkCount) {
+        return new ChunkRange(chunkIndex, this.fileSize, chunkCount);
+    }
+
+    private String getFileName() {
+        int lastBackslashPos = this.serverList.get(0).lastIndexOf('/');
+        return this.serverList.get(0).substring(lastBackslashPos + 1);
     }
 
     /**
@@ -102,9 +128,9 @@ public class DownloadManager {
      * @param chunkIndex - the number of chunk to be downloaded from the file.
      * @return a HTTPRangeGetter obejct.
      */
-    private HTTPRangeGetter createGetter(int chunkIndex) {
+    private HTTPRangeGetter createGetter(int chunkIndex, ChunkRange range) {
         return new HTTPRangeGetter(
-                this.serverList.get(0), chunkIndex, this.chunkManager, this.chunkQueue);
+                this.serverList.get(0), range, chunkIndex, this.chunkManager, this.chunkQueue);
     }
 
     /**
