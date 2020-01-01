@@ -5,26 +5,34 @@ package ioHandlers;
  */
 public class ProgramPrinter {
 
-    public static void printDownloadPercentage(int progressPercentage) {
-        System.err.println(String.format("Downloaded:\t...\t%d%%", progressPercentage));
-    }
+    private static final String MESSAGE_DIVIDER = "-----------------------";
 
     public static void printMessage(String message) {
         System.err.println(message);
     }
 
     public static void printError(String errorMessage) {
-        System.err.println("Download Failed.\n" + errorMessage);
+        printMessage("Download Failed.");
+        printMessage(errorMessage);
     }
 
     public static void printError(String errorMessage, Exception e) {
-        System.err.println("Download Failed.\n" + errorMessage);
-        System.err.println(e);
+        printMessage("Download Failed.");
+        printMessage(String.format("%s --- %s", errorMessage, e.getMessage()));
+    }
+
+    public static void printDownloadPercentage(int progressPercentage) {
+        printMessage(String.format("Downloaded:\t...\t%d%%", progressPercentage));
+    }
+
+
+    public static void printInitMessage(String fileName, int numServers, int numConnections) {
+        printMessage(String.format("\nDownloading '%s'\nfrom %d server(s), using %d connections.\n%s\n",
+                fileName, numServers, numConnections, MESSAGE_DIVIDER));
     }
 
     public static void printSuccessMessage() {
-        ProgramPrinter.printMessage("-----------------------");
-        ProgramPrinter.printMessage("Download succeeded !");
-        ProgramPrinter.printMessage("-----------------------");
+        printMessage(String.format("%s\nDownload succeeded !\n%s",
+                MESSAGE_DIVIDER, MESSAGE_DIVIDER));
     }
 }

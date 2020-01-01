@@ -8,5 +8,6 @@ public class Main {
     public static void main(String[] args) {
         ProgramInput programInput = UserInputHandler.parseArguments(args);
         DownloadManager downloadManager = new DownloadManager(programInput);
+        downloadManager.startDownload();
     }
 }

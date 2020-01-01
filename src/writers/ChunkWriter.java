@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 public class ChunkWriter implements Runnable {
 
-    // wait no longer than this for fetching an available Chunk from the ChunkQueue
+    // wait no longer than this for fetching
+    // an available Chunk from the ChunkQueue
     private static final int WAITING_TIMEOUT = 3;
 
     private ChunkQueue chunkQueue;

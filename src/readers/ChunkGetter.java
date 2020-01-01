@@ -5,10 +5,10 @@ import models.*;
 import java.io.*;
 import java.net.*;
 
-public class HTTPRangeGetter implements Runnable {
+public class ChunkGetter implements Runnable {
 
     private final int BYTE_BUFFER_SIZE = 4096; // byte buffer size used when reading content
-    private final String REQUEST_TYPE = "Range"; // HTTP range request name
+    private final String REQUEST_TYPE = "Range"; // HTTP range request method name
 
     private String serverAddress;
     private int chunkIndex;
@@ -24,8 +24,8 @@ public class HTTPRangeGetter implements Runnable {
      * @param chunkManager - reference to object tracking the chunk downloaded.
      * @param chunkQueue - reference to synchronous queue handling completed chunks.
      */
-    public HTTPRangeGetter(String address, ChunkRange range, int chunkIndex,
-                           ChunkManager chunkManager, ChunkQueue chunkQueue) {
+    public ChunkGetter(String address, ChunkRange range, int chunkIndex,
+                       ChunkManager chunkManager, ChunkQueue chunkQueue) {
         this.serverAddress = address;
         this.chunkIndex = chunkIndex;
         this.range = range;
