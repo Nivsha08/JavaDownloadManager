@@ -6,6 +6,7 @@ import models.ChunkQueue;
 import models.DownloadStatus;
 
 import java.io.*;
+import java.util.concurrent.TimeUnit;
 
 public class ChunkWriter implements Runnable {
 
@@ -54,17 +55,15 @@ public class ChunkWriter implements Runnable {
      */
     @Override
     public void run() {
-        while (this.chunkQueue.gotProducers()) {
-            Chunk c = this.chunkQueue.poll();
+        Chunk c;
+        while (true) {
             try {
-                if (c != null) {
-                    // System.out.println("writes: " + c.getStartPosition());
-                    this.writeChunkToFile(c);
-                }
-                Thread.sleep(100);
+                if (((c = this.chunkQueue.poll(3, TimeUnit.SECONDS)) == null))
+                    break;
+                else this.writeChunkToFile(c);
             }
             catch (InterruptedException e) {
-                ProgramPrinter.printError("Writer thread interrupted.", e);
+                e.printStackTrace();
             }
         }
         this.downloadStatus.handleDownloadSuccess();
@@ -75,7 +74,6 @@ public class ChunkWriter implements Runnable {
      * Frees all the resources used by this object.
      */
     private void closeWriter() {
-        // System.out.println("closing writer");
         try {
             this.writer.close();
         }

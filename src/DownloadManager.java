@@ -72,7 +72,7 @@ public class DownloadManager {
      * waiting to be written to file.
      */
     private void initChunkQueue() {
-        this.chunkQueue = new ChunkQueue();
+        this.chunkQueue = new ChunkQueue(this.chunkManager.getChunksCount());
     }
 
     /**

@@ -36,13 +36,9 @@ public class HTTPRangeGetter implements Runnable {
      */
     @Override
     public void run() {
-//        System.out.println("getter downloading chunk number: " + this.chunkIndex);
-        this.chunkQueue.registerProducer();
         HttpURLConnection connection = this.initConnection();
-//        System.out.println("chunk number " + this.chunkIndex + " downloads:" + this.range.start() + "-" + this.range.end());
         byte[] downloadedData = this.downloadChunk(connection);
         this.saveDownloadedData(downloadedData);
-        this.chunkQueue.unregisterProducer();
     }
 
     /**
@@ -96,7 +92,8 @@ public class HTTPRangeGetter implements Runnable {
 
         try {
             BufferedInputStream reader = new BufferedInputStream(connectionInputStream);
-            reader.read(result, 0, rangeSize);
+            int readbytes = reader.read(result, 0, rangeSize);
+            System.out.println("Read: "+ readbytes + "bytes instead of "+ rangeSize+"bytes");
         }
         catch (IOException e) {
             ProgramPrinter.printError("Failed to read from the source file.", e);

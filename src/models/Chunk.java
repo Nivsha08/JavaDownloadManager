@@ -1,6 +1,6 @@
 package models;
 
-public class Chunk {
+public class Chunk implements Comparable<Chunk> {
 
     public static final int CHUNK_SIZE = 128000; // chunk size in bytes
     private byte[] data;
@@ -36,4 +36,9 @@ public class Chunk {
     }
 
     public long getSize() { return this.data.length; }
+
+    @Override
+    public int compareTo(Chunk o) {
+        return (int)(this.getStartPosition() - o.getStartPosition());
+    }
 }

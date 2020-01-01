@@ -1,26 +1,10 @@
 package models;
 
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
-public class ChunkQueue extends SynchronousQueue<Chunk> {
+public class ChunkQueue extends PriorityBlockingQueue<Chunk> {
 
-    private int producers = 0;
-
-    public ChunkQueue() {}
-
-    public boolean gotProducers() {
-        return (this.producers > 0);
-    }
-
-    public void registerProducer() {
-        synchronized (this) {
-            this.producers++;
-        }
-    }
-
-    public void unregisterProducer() {
-        synchronized (this) {
-            this.producers--;
-        }
+    public ChunkQueue(int queueCapacity) {
+        super(queueCapacity);
     }
 }
