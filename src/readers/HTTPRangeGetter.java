@@ -7,7 +7,9 @@ import java.net.*;
 
 public class HTTPRangeGetter implements Runnable {
 
-    private final String REQUEST_TYPE = "Range";
+    private final int BYTE_BUFFER_SIZE = 4096; // byte buffer size used when reading content
+    private final String REQUEST_TYPE = "Range"; // HTTP range request name
+
     private String serverAddress;
     private int chunkIndex;
     private ChunkRange range;
@@ -68,38 +70,41 @@ public class HTTPRangeGetter implements Runnable {
      */
     private byte[] downloadChunk(HttpURLConnection connection) {
         String byteRange = this.range.httpByteRange();
-        connection.setRequestProperty(REQUEST_TYPE, byteRange);
-
         try {
+            connection.setRequestProperty(REQUEST_TYPE, byteRange);
             InputStream connectionInputStream = connection.getInputStream();
             return this.readByteRange(connectionInputStream);
         }
         catch (IOException e) {
             ProgramPrinter.printError("Failed to read the source file input stream.", e);
         }
+        finally {
+            connection.disconnect();
+        }
 
         return null;
     }
 
     /**
-     * Reads CHUNK_SIZE bytes into a byte array from the given input stream.
+     * Reads the entire Http range into a byte array from the given input stream.
      * @param connectionInputStream - the file's input stream.
      * @return a byte array with the downloaded data.
      */
     private byte[] readByteRange(InputStream connectionInputStream) {
-        int rangeSize = (int)this.range.size();
-        byte[] result = new byte[rangeSize];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunkBuffer = new byte[BYTE_BUFFER_SIZE];
+        int bytesRead;
 
         try {
-            BufferedInputStream reader = new BufferedInputStream(connectionInputStream);
-            int readbytes = reader.read(result, 0, rangeSize);
-            System.out.println("Read: "+ readbytes + "bytes instead of "+ rangeSize+"bytes");
+            while ((bytesRead = connectionInputStream.read(chunkBuffer)) > 0) {
+                out.write(chunkBuffer, 0, bytesRead);
+            }
         }
         catch (IOException e) {
             ProgramPrinter.printError("Failed to read from the source file.", e);
         }
 
-        return result;
+        return out.toByteArray();
     }
 
     /**

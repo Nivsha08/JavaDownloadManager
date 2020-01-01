@@ -10,6 +10,9 @@ import java.util.concurrent.TimeUnit;
 
 public class ChunkWriter implements Runnable {
 
+    // wait no longer than this for fetching an available Chunk from the ChunkQueue
+    private static final int WAITING_TIMEOUT = 3;
+
     private ChunkQueue chunkQueue;
     private String destFolder;
     private RandomAccessFile writer;
@@ -58,7 +61,7 @@ public class ChunkWriter implements Runnable {
         Chunk c;
         while (true) {
             try {
-                if (((c = this.chunkQueue.poll(3, TimeUnit.SECONDS)) == null))
+                if (((c = this.chunkQueue.poll(WAITING_TIMEOUT, TimeUnit.SECONDS)) == null))
                     break;
                 else this.writeChunkToFile(c);
             }
