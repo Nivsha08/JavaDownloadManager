@@ -51,9 +51,7 @@ public class DownloadStatus {
      * Show a success message when the progress is complete.
      */
     public void handleDownloadSuccess() {
-        shownPercentage = 100;
-        ProgramPrinter.printDownloadPercentage(shownPercentage);
-        ProgramPrinter.printMessage("Download succeeded.");
+        ProgramPrinter.printSuccessMessage();
     }
 
 

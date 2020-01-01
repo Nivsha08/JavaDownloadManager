@@ -22,4 +22,9 @@ public class ProgramPrinter {
         System.err.println(e);
     }
 
+    public static void printSuccessMessage() {
+        ProgramPrinter.printMessage("-----------------------");
+        ProgramPrinter.printMessage("Download succeeded !");
+        ProgramPrinter.printMessage("-----------------------");
+    }
 }
