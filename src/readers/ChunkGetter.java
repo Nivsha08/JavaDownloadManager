@@ -4,29 +4,31 @@ import ioHandlers.ProgramPrinter;
 import models.*;
 import java.io.*;
 import java.net.*;
+import java.util.List;
 
 public class ChunkGetter implements Runnable {
 
     private final int BYTE_BUFFER_SIZE = 4096; // byte buffer size used when reading content
     private final String REQUEST_TYPE = "Range"; // HTTP range request method name
 
-    private String serverAddress;
     private int chunkIndex;
+    private String serverAddress;
+    private List<String> serverList;
     private ChunkRange range;
     private ChunkManager chunkManager;
     private ChunkQueue chunkQueue;
 
     /**
      * Initializes a HTTP getters object.
-     * @param address - the server's URL address from which the getter will download.
+     * @param serverList - the servers list of address.
      * @param range - ChunkRange object to hold the download range for this getter.
      * @param chunkIndex - the index of the chunk to be downloaded by this getter.
      * @param chunkManager - reference to object tracking the chunk downloaded.
      * @param chunkQueue - reference to synchronous queue handling completed chunks.
      */
-    public ChunkGetter(String address, ChunkRange range, int chunkIndex,
+    public ChunkGetter(List<String> serverList, ChunkRange range, int chunkIndex,
                        ChunkManager chunkManager, ChunkQueue chunkQueue) {
-        this.serverAddress = address;
+        this.serverList = serverList;
         this.chunkIndex = chunkIndex;
         this.range = range;
         this.chunkManager = chunkManager;
@@ -38,6 +40,8 @@ public class ChunkGetter implements Runnable {
      */
     @Override
     public void run() {
+        int threadID = (int)Thread.currentThread().getId();
+        serverAddress =  serverList.get((threadID % serverList.size()));
         HttpURLConnection connection = this.initConnection();
         byte[] downloadedData = this.downloadChunk(connection);
         this.saveDownloadedData(downloadedData);
