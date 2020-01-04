@@ -5,8 +5,9 @@ import ioHandlers.ProgramPrinter;
 public class DownloadStatus {
 
     private long totalFileSize;
-    private long completedBytes = 0;
+    private long totalCompletedBytes = 0;
     private int shownPercentage = 0;
+    private boolean isCompleted = false;
 
     /**
      * A status object to represent the download status at any given time, and handle the
@@ -25,11 +26,14 @@ public class DownloadStatus {
 
     /**
      * Increments the {@completedBytes} size by the given number.
-     * @param completedBytes - amount of completed bytes.
+     * @param chunkCompletedBytes - amount of completed bytes.
      */
-    public void addCompletedBytes(long completedBytes) {
-        this.completedBytes += completedBytes;
+    public void addCompletedBytes(long chunkCompletedBytes) {
+        this.totalCompletedBytes += chunkCompletedBytes;
         updatePercentage();
+        if (totalCompletedBytes == totalFileSize) {
+            isCompleted = true;
+        }
     }
 
     /**
@@ -37,7 +41,7 @@ public class DownloadStatus {
      */
     private void updatePercentage() {
         synchronized (this) {
-            double percentage = (double) completedBytes / totalFileSize;
+            double percentage = (double) totalCompletedBytes / totalFileSize;
             int newShownPercentage = (int)(percentage * 100);
 
             if (newShownPercentage > shownPercentage) {
@@ -45,6 +49,10 @@ public class DownloadStatus {
                 ProgramPrinter.printDownloadPercentage(shownPercentage);
             }
         }
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
     }
 
     /**

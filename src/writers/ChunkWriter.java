@@ -12,7 +12,7 @@ public class ChunkWriter implements Runnable {
 
     // wait no longer than this for fetching
     // an available Chunk from the ChunkQueue
-    private static final int WAITING_TIMEOUT = 3;
+    private static final int WAITING_TIMEOUT = 10;
 
     private ChunkQueue chunkQueue;
     private String destFolder;
@@ -60,14 +60,14 @@ public class ChunkWriter implements Runnable {
     @Override
     public void run() {
         Chunk c;
-        while (true) {
+        while (!this.downloadStatus.isCompleted()) {
             try {
-                if (((c = this.chunkQueue.poll(WAITING_TIMEOUT, TimeUnit.SECONDS)) == null))
-                    break;
-                else this.writeChunkToFile(c);
+                c = this.chunkQueue.poll(WAITING_TIMEOUT, TimeUnit.SECONDS);
+                if (c != null)
+                    writeChunkToFile(c);
             }
             catch (InterruptedException e) {
-                e.printStackTrace();
+                ProgramPrinter.printError("Failed to fetch a Chunk from the Chunk queue.", e);
             }
         }
         this.downloadStatus.handleDownloadSuccess();
