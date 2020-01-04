@@ -1,11 +1,10 @@
 package writers;
 
 import ioHandlers.ProgramPrinter;
-import models.Chunk;
-import models.ChunkQueue;
-import models.DownloadStatus;
+import models.*;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class ChunkWriter implements Runnable {
@@ -15,7 +14,9 @@ public class ChunkWriter implements Runnable {
     private static final int WAITING_TIMEOUT = 10;
 
     private ChunkQueue chunkQueue;
+    private ChunkManager chunkManager;
     private String destFolder;
+    private MetadataManager metadataManager;
     private RandomAccessFile writer;
     private DownloadStatus downloadStatus;
 
@@ -24,11 +25,14 @@ public class ChunkWriter implements Runnable {
      * @param destinationFolderPath - the destination folder to save the downloaded file in.
      * @param fileName - the downloaded file's name.
      * @param chunkQueue - the chunk queue to take chunks from.
+     * @param chunkManager
      */
     public ChunkWriter(String destinationFolderPath, String fileName,
-                       ChunkQueue chunkQueue, DownloadStatus downloadStatus) {
+                       ChunkQueue chunkQueue, ChunkManager chunkManager, MetadataManager metadataManager, DownloadStatus downloadStatus) {
         this.chunkQueue = chunkQueue;
+        this.chunkManager = chunkManager;
         this.destFolder = destinationFolderPath;
+        this.metadataManager = metadataManager;
         String destFilePath = this.destFolder + "/" + fileName;
         this.initWriter(destFilePath);
         this.downloadStatus = downloadStatus;
@@ -39,9 +43,15 @@ public class ChunkWriter implements Runnable {
      * @param destFilePath - the downloaded file destination path.
      */
     private void initWriter(String destFilePath) {
+        File destFile = new File(destFilePath);
         try {
-            this.writer = new RandomAccessFile(destFilePath, "rw");
-            this.writer.setLength(0);
+            if (destFile.exists()) {
+                this.writer = new RandomAccessFile(destFile, "rw");
+            }
+            else {
+                this.writer = new RandomAccessFile(destFilePath, "rw");
+                this.writer.setLength(0);
+            }
             this.writer.seek(0);
         }
         catch (FileNotFoundException e) {
@@ -93,6 +103,7 @@ public class ChunkWriter implements Runnable {
     private void writeChunkToFile(Chunk c) {
         synchronized (this) {
             try {
+//                System.out.println("Writing: \t"+c.getSize()+"\tbytes: "+ Arrays.toString(c.getData()));
                 this.writer.seek(c.getStartPosition());
                 this.writer.write(c.getData());
                 this.downloadStatus.addCompletedBytes(c.getSize());
@@ -100,6 +111,12 @@ public class ChunkWriter implements Runnable {
             catch (IOException e) {
                 ProgramPrinter.printError("Failed to write data portion to file.", e);
             }
+            flagChunkAsCompleted(c);
         }
+    }
+
+    private void flagChunkAsCompleted(Chunk c) {
+        c.setStatus(true);
+        metadataManager.save(chunkManager);
     }
 }

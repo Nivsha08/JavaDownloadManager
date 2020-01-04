@@ -115,7 +115,7 @@ public class ChunkGetter implements Runnable {
      */
     private void saveDownloadedData(byte[] downloadedData) {
         try {
-            Chunk c = new Chunk(downloadedData, this.range);
+            Chunk c = new Chunk(chunkIndex, downloadedData, this.range);
             this.chunkManager.setChunkAt(this.chunkIndex, c);
             this.chunkQueue.put(c);
             Thread.sleep(200); //todo: document

@@ -16,12 +16,14 @@ public class DownloadStatus {
      */
     public DownloadStatus(long totalFileSize) {
         this.totalFileSize = totalFileSize;
-        recoverDownloadStatus();
         ProgramPrinter.printDownloadPercentage(shownPercentage);
     }
 
-    private void recoverDownloadStatus() {
-        // todo: implement so this function populates the props by the metadata file
+    public DownloadStatus(long totalFileSize, long completedBytes) {
+        this.totalFileSize = totalFileSize;
+        this.totalCompletedBytes = completedBytes;
+        ProgramPrinter.printMessage("Resuming download...\n");
+        this.updatePercentage();
     }
 
     /**
@@ -31,9 +33,6 @@ public class DownloadStatus {
     public void addCompletedBytes(long chunkCompletedBytes) {
         this.totalCompletedBytes += chunkCompletedBytes;
         updatePercentage();
-        if (totalCompletedBytes == totalFileSize) {
-            isCompleted = true;
-        }
     }
 
     /**
@@ -47,6 +46,10 @@ public class DownloadStatus {
             if (newShownPercentage > shownPercentage) {
                 shownPercentage = newShownPercentage;
                 ProgramPrinter.printDownloadPercentage(shownPercentage);
+            }
+
+            if (totalCompletedBytes >= totalFileSize) {
+                isCompleted = true;
             }
         }
     }
