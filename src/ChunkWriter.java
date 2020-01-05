@@ -1,13 +1,9 @@
 import java.io.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.PriorityBlockingQueue;
 
 public class ChunkWriter implements Runnable {
 
-    // wait no longer than this for fetching
-    // an available Chunk from the ChunkQueue
-    private static final int WAITING_TIMEOUT = 10;
-
-    private ChunkQueue chunkQueue;
+    private PriorityBlockingQueue<Chunk> chunkQueue;
     private ChunkManager chunkManager;
     private String destFolder;
     private MetadataManager metadataManager;
@@ -22,7 +18,7 @@ public class ChunkWriter implements Runnable {
      * @param chunkManager
      */
     public ChunkWriter(String destinationFolderPath, String fileName,
-                       ChunkQueue chunkQueue, ChunkManager chunkManager, MetadataManager metadataManager, DownloadStatus downloadStatus) {
+                       PriorityBlockingQueue<Chunk> chunkQueue, ChunkManager chunkManager, MetadataManager metadataManager, DownloadStatus downloadStatus) {
         this.chunkQueue = chunkQueue;
         this.chunkManager = chunkManager;
         this.destFolder = destinationFolderPath;
@@ -65,34 +61,11 @@ public class ChunkWriter implements Runnable {
     public void run() {
         Chunk c;
         while (!this.downloadStatus.isCompleted()) {
-            try {
-                c = this.chunkQueue.poll(WAITING_TIMEOUT, TimeUnit.SECONDS);
-                if (c != null)
-                    writeChunkToFile(c);
-            }
-            catch (InterruptedException e) {
-                ProgramPrinter.printError("Failed to fetch a Chunk from the Chunk queue.", e);
-            }
+            c = this.chunkQueue.poll();
+            if (c != null)
+                writeChunkToFile(c);
         }
         handleWritingCompletion();
-    }
-
-    private void handleWritingCompletion() {
-        this.closeWriter();
-        this.metadataManager.clearFiles();
-        this.downloadStatus.handleDownloadSuccess();
-    }
-
-    /**
-     * Frees all the resources used by this object.
-     */
-    private void closeWriter() {
-        try {
-            this.writer.close();
-        }
-        catch (IOException e) {
-            ProgramPrinter.printError("Unable to properly close writer.", e);
-        }
     }
 
     /**
@@ -113,8 +86,34 @@ public class ChunkWriter implements Runnable {
         }
     }
 
+    /**
+     * Mark the given Chunk as successfully written to disk, and add it to the metadata file.
+     * @param c - the completed Chunk.
+     */
     private void flagChunkAsCompleted(Chunk c) {
         c.setStatus(true);
         metadataManager.save(chunkManager);
     }
+
+    /**
+     * Finalizes the download process after all the Chunk written to disk.
+     */
+    private void handleWritingCompletion() {
+        closeWriter();
+        metadataManager.clearFiles();
+        downloadStatus.handleDownloadSuccess();
+    }
+
+    /**
+     * Frees all the resources used by this object.
+     */
+    private void closeWriter() {
+        try {
+            this.writer.close();
+        }
+        catch (IOException e) {
+            ProgramPrinter.printError("Unable to properly close writer.", e);
+        }
+    }
+
 }

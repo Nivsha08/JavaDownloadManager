@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.List;
+import java.util.concurrent.PriorityBlockingQueue;
 
 public class ChunkGetter implements Runnable {
 
@@ -12,7 +13,7 @@ public class ChunkGetter implements Runnable {
     private List<String> serverList;
     private ChunkRange range;
     private ChunkManager chunkManager;
-    private ChunkQueue chunkQueue;
+    private PriorityBlockingQueue<Chunk> chunkQueue;
 
     /**
      * Initializes a HTTP getters object.
@@ -23,7 +24,7 @@ public class ChunkGetter implements Runnable {
      * @param chunkQueue - reference to synchronous queue handling completed chunks.
      */
     public ChunkGetter(List<String> serverList, ChunkRange range, int chunkIndex,
-                       ChunkManager chunkManager, ChunkQueue chunkQueue) {
+                       ChunkManager chunkManager, PriorityBlockingQueue<Chunk> chunkQueue) {
         this.serverList = serverList;
         this.chunkIndex = chunkIndex;
         this.range = range;

@@ -1,4 +1,3 @@
-import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -6,6 +5,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class DownloadManager {
+
+    private static final String HEAD_REQUEST_METHOD = "HEAD";
 
     private String fileName;
     private int numConnections;
@@ -15,7 +16,7 @@ public class DownloadManager {
     private MetadataManager metadataManager;
     private ChunkManager chunkManager;
     private ChunkWriter chunkWriter;
-    private ChunkQueue chunkQueue;
+    private PriorityBlockingQueue<Chunk> chunkQueue;
     private DownloadStatus downloadStatus;
 
     /**
@@ -24,14 +25,6 @@ public class DownloadManager {
     public DownloadManager(ProgramInput userInput) {
         populateProperties(userInput);
         metadataManager = new MetadataManager(fileName, fileSize);
-    }
-
-    /**
-     * Download manager entry point to start the download process.
-     */
-    public void startDownload() {
-        initThreads(numConnections);
-        initDownload();
     }
 
     /**
@@ -46,25 +39,36 @@ public class DownloadManager {
     }
 
     /**
-     * Initialize the object managing the different download parts.
+     * Establish a URL connection to one of the servers and fetch the total
+     * desired file size in bytes.
+     * @return File size in bytes.
      */
-    private void initDownload() {
-        ProgramPrinter.printInitMessage(fileName, serverList.size(), numConnections);
-        initChunkManager(this.fileSize);
-        initDownloadStatus();
-        initChunkQueue();
-        initChunkWriter();
-        initChunkGetters();
+    private long getFileSize() {
+        long fileSize = 0;
+        try {
+            URL url = new URL(this.serverList.get(0));
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(HEAD_REQUEST_METHOD);
+            fileSize = connection.getContentLength();
+            connection.disconnect();
+        }
+        catch (MalformedURLException e) {
+            ProgramPrinter.printError("Invalid URL address given as input.", e);
+        }
+        catch (IOException e) {
+            ProgramPrinter.printError("Unable to get the total size of the source file.", e);
+        }
+
+        return fileSize;
     }
 
-    private void initDownloadStatus() {
-        long completedBytes = chunkManager.getCompletedChunksIDs().length * Chunk.CHUNK_SIZE;
-        if (completedBytes == 0) {
-            downloadStatus = new DownloadStatus(fileSize);
-        }
-        else {
-            downloadStatus = new DownloadStatus(fileSize, completedBytes);
-        }
+    /**
+     * Download manager entry point to start the download process.
+     */
+    public void startDownload() {
+        ProgramPrinter.printInitMessage(fileName, serverList.size(), numConnections);
+        initThreads(numConnections);
+        initDownload();
     }
 
     /**
@@ -73,6 +77,31 @@ public class DownloadManager {
      */
     private void initThreads(int n) {
         this.threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(n);
+    }
+
+    /**
+     * Initialize the object managing the different download parts.
+     */
+    private void initDownload() {
+        initChunkManager(this.fileSize);
+        initDownloadStatus();
+        initChunkQueue();
+        initChunkWriter();
+        initChunkGetters();
+        waitForCompletionAndCloseConnections();
+    }
+
+    /**
+     * Initialize the object managing the download progress and completion status.
+     */
+    private void initDownloadStatus() {
+        long completedBytes = chunkManager.getCompletedChunksIDs().length * Chunk.CHUNK_SIZE;
+        if (completedBytes == 0) { // i.e. running the download manager for the first time
+            downloadStatus = new DownloadStatus(fileSize);
+        }
+        else {
+            downloadStatus = new DownloadStatus(fileSize, completedBytes);
+        }
     }
 
     /**
@@ -89,21 +118,21 @@ public class DownloadManager {
     }
 
     /**
-     * Creates a blocking synchronous queue for handling the completed chunks
+     * Creates a blocking priority queue for handling the completed chunks
      * waiting to be written to file.
      */
     private void initChunkQueue() {
-        this.chunkQueue = new ChunkQueue(this.chunkManager.getChunksCount());
+        chunkQueue = new PriorityBlockingQueue<>(chunkManager.getChunksCount());
     }
 
     /**
      * Initialize a ChunkWriter object to register to the queue.
      */
     private void initChunkWriter() {
-        File metadataFile = metadataManager.getFile();
         String currentDirPath = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
-        chunkWriter = new ChunkWriter(currentDirPath, fileName, chunkQueue, chunkManager, metadataManager, downloadStatus);
-        Thread writerThread = new Thread(this.chunkWriter);
+        chunkWriter = new ChunkWriter(
+                currentDirPath, fileName, chunkQueue, chunkManager, metadataManager, downloadStatus);
+        Thread writerThread = new Thread(chunkWriter);
         writerThread.start();
     }
 
@@ -114,13 +143,11 @@ public class DownloadManager {
         int chunkCount = chunkManager.getChunksCount();
         int[] remainingChunks = chunkManager.getRemainingChunkIDs();
 
-        // todo: add support for different range from different servers
         for (int chunkID : remainingChunks) {
-            ChunkRange range = this.calculateChunkByteRange(chunkID, chunkCount);
-            ChunkGetter getter = this.createGetter(chunkID, range);
-            this.threadPool.execute(getter);
+            ChunkRange range = calculateChunkByteRange(chunkID, chunkCount);
+            ChunkGetter getter = createGetter(chunkID, range);
+            threadPool.execute(getter);
         }
-        this.terminateConnections();
     }
 
     /**
@@ -131,30 +158,6 @@ public class DownloadManager {
      */
     private ChunkRange calculateChunkByteRange(int chunkIndex, int chunkCount) {
         return new ChunkRange(chunkIndex, this.fileSize, chunkCount);
-    }
-
-    /**
-     * Establish a URL connection to one of the servers and fetch the total
-     * desired file size in bytes.
-     * @return File size in bytes.
-     */
-    private long getFileSize() {
-        long fileSize = 0;
-        try {
-            URL url = new URL(this.serverList.get(0));
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("HEAD");
-            fileSize = connection.getContentLength();
-            connection.disconnect();
-        }
-        catch (MalformedURLException e) {
-            ProgramPrinter.printError("Invalid URL address given as input.", e);
-        }
-        catch (IOException e) {
-            ProgramPrinter.printError("Unable to get the total size of the source file.", e);
-        }
-
-        return fileSize;
     }
 
     /**
@@ -170,13 +173,13 @@ public class DownloadManager {
     /**
      * Kill all existing connection and terminate the download manager execution.
      */
-    private void terminateConnections() {
-        // todo: maybe ensure download is completed before killing connections?
+    private void waitForCompletionAndCloseConnections() {
         threadPool.shutdown();
         try {
             threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        }
+        catch (InterruptedException e) {
+            ProgramPrinter.printError("Some connections were interrupted.", e);
         }
     }
 

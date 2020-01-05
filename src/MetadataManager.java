@@ -4,6 +4,7 @@ public class MetadataManager {
 
     private static final String SUFFIX = ".tmp";
     private static final String COPY_SUFFIX = ".copy.tmp";
+
     private String sourceFileName;
     private long sourceFileTotalSize;
     private File metadataFile = null;
@@ -37,10 +38,6 @@ public class MetadataManager {
 
     public boolean metadataFileExists() {
         return new File(sourceFileName + SUFFIX).exists();
-    }
-
-    public File getFile() {
-        return this.metadataFile;
     }
 
     public void clearFiles() {

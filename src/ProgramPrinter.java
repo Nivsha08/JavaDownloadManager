@@ -16,7 +16,7 @@ public class ProgramPrinter {
 
     public static void printError(String errorMessage, Exception e) {
         printMessage("Download Failed.");
-        printMessage(String.format("%s --- %s", errorMessage, e.getMessage()));
+        printMessage(String.format("%s\n%s", errorMessage, e.getLocalizedMessage()));
     }
 
     public static void printDownloadPercentage(int progressPercentage) {
@@ -25,7 +25,7 @@ public class ProgramPrinter {
 
 
     public static void printInitMessage(String fileName, int numServers, int numConnections) {
-        printMessage(String.format("\nDownloading '%s'\nfrom %d server(s), using %d connections.\n%s\n",
+        printMessage(String.format("\nDownloading '%s'\nfrom %d server(s), using %d connection(s).\n%s\n",
                 fileName, numServers, numConnections, MESSAGE_DIVIDER));
     }
 
