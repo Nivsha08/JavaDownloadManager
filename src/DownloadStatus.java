@@ -1,7 +1,3 @@
-package models;
-
-import ioHandlers.ProgramPrinter;
-
 public class DownloadStatus {
 
     private long totalFileSize;

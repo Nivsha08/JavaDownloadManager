@@ -1,5 +1,3 @@
-package ioHandlers;
-
 /**
  * A static class to handle program messages to the standard error (stderr).
  */

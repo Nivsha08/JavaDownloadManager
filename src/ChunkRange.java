@@ -1,5 +1,3 @@
-package models;
-
 import java.io.Serializable;
 
 public class ChunkRange implements Serializable {

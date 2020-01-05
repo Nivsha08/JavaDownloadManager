@@ -1,5 +1,3 @@
-package ioHandlers;
-
 import java.util.ArrayList;
 
 public class ProgramInput {
