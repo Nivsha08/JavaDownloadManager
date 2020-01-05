@@ -23,7 +23,7 @@ public class DownloadManager {
      */
     public DownloadManager(ProgramInput userInput) {
         populateProperties(userInput);
-        metadataManager = new MetadataManager(fileName);
+        metadataManager = new MetadataManager(fileName, fileSize);
     }
 
     /**

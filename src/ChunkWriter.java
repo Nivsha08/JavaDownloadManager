@@ -74,8 +74,13 @@ public class ChunkWriter implements Runnable {
                 ProgramPrinter.printError("Failed to fetch a Chunk from the Chunk queue.", e);
             }
         }
-        this.downloadStatus.handleDownloadSuccess();
+        handleWritingCompletion();
+    }
+
+    private void handleWritingCompletion() {
         this.closeWriter();
+        this.metadataManager.clearFiles();
+        this.downloadStatus.handleDownloadSuccess();
     }
 
     /**
@@ -97,7 +102,6 @@ public class ChunkWriter implements Runnable {
     private void writeChunkToFile(Chunk c) {
         synchronized (this) {
             try {
-//                System.out.println("Writing: \t"+c.getSize()+"\tbytes: "+ Arrays.toString(c.getData()));
                 this.writer.seek(c.getStartPosition());
                 this.writer.write(c.getData());
                 this.downloadStatus.addCompletedBytes(c.getSize());
