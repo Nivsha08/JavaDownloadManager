@@ -4,6 +4,7 @@ import writers.ChunkWriter;
 import ioHandlers.ProgramInput;
 import ioHandlers.ProgramPrinter;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -17,6 +18,7 @@ public class DownloadManager {
     private long fileSize;
     private ArrayList<String> serverList;
     private ThreadPoolExecutor threadPool;
+    private MetadataManager metadataManager;
     private ChunkManager chunkManager;
     private ChunkWriter chunkWriter;
     private ChunkQueue chunkQueue;
@@ -27,6 +29,7 @@ public class DownloadManager {
      */
     public DownloadManager(ProgramInput userInput) {
         populateProperties(userInput);
+        metadataManager = new MetadataManager(fileName);
     }
 
     /**
@@ -53,15 +56,21 @@ public class DownloadManager {
      */
     private void initDownload() {
         ProgramPrinter.printInitMessage(fileName, serverList.size(), numConnections);
-        initDownloadStatus();
         initChunkManager(this.fileSize);
+        initDownloadStatus();
         initChunkQueue();
-        initChunkGetters();
         initChunkWriter();
+        initChunkGetters();
     }
 
     private void initDownloadStatus() {
-        downloadStatus = new DownloadStatus(fileSize);
+        long completedBytes = chunkManager.getCompletedChunksIDs().length * Chunk.CHUNK_SIZE;
+        if (completedBytes == 0) {
+            downloadStatus = new DownloadStatus(fileSize);
+        }
+        else {
+            downloadStatus = new DownloadStatus(fileSize, completedBytes);
+        }
     }
 
     /**
@@ -77,7 +86,12 @@ public class DownloadManager {
      * @param fileSize - the desired file size, in bytes.
      */
     private void initChunkManager(long fileSize) {
-        this.chunkManager = new ChunkManager(fileSize, Chunk.CHUNK_SIZE);
+        if (metadataManager.isFirstRun()) {
+            chunkManager = new ChunkManager(fileSize);
+        }
+        else {
+            chunkManager = metadataManager.load();
+        }
     }
 
     /**
@@ -92,9 +106,9 @@ public class DownloadManager {
      * Initialize a ChunkWriter object to register to the queue.
      */
     private void initChunkWriter() {
+        File metadataFile = metadataManager.getFile();
         String currentDirPath = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
-        this.chunkWriter = new ChunkWriter(currentDirPath, this.fileName,
-                this.chunkQueue, this.downloadStatus);
+        chunkWriter = new ChunkWriter(currentDirPath, fileName, chunkQueue, chunkManager, metadataManager, downloadStatus);
         Thread writerThread = new Thread(this.chunkWriter);
         writerThread.start();
     }
@@ -103,12 +117,13 @@ public class DownloadManager {
      * Initializing the required number of connections and start downloading the file.
      */
     private void initChunkGetters() {
-        int chunkCount = this.chunkManager.getChunksCount();
+        int chunkCount = chunkManager.getChunksCount();
+        int[] remainingChunks = chunkManager.getRemainingChunkIDs();
 
         // todo: add support for different range from different servers
-        for (int i = 0; i < chunkCount; i++) {
-            ChunkRange range = this.calculateChunkByteRange(i, chunkCount);
-            ChunkGetter getter = this.createGetter(i, range);
+        for (int chunkID : remainingChunks) {
+            ChunkRange range = this.calculateChunkByteRange(chunkID, chunkCount);
+            ChunkGetter getter = this.createGetter(chunkID, range);
             this.threadPool.execute(getter);
         }
         this.terminateConnections();
@@ -155,8 +170,7 @@ public class DownloadManager {
      * @return a ChunkGetter obejct.
      */
     private ChunkGetter createGetter(int chunkIndex, ChunkRange range) {
-        return new ChunkGetter(
-                this.serverList.get(0), range, chunkIndex, this.chunkManager, this.chunkQueue);
+        return new ChunkGetter(serverList, range, chunkIndex, chunkManager, chunkQueue);
     }
 
     /**
@@ -164,7 +178,12 @@ public class DownloadManager {
      */
     private void terminateConnections() {
         // todo: maybe ensure download is completed before killing connections?
-        this.threadPool.shutdown();
+        threadPool.shutdown();
+        try {
+            threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

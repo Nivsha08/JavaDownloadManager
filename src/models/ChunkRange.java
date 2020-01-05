@@ -1,6 +1,8 @@
 package models;
 
-public class ChunkRange {
+import java.io.Serializable;
+
+public class ChunkRange implements Serializable {
 
     private long fileSize;
     private int totalChunkCount;

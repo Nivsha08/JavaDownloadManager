@@ -5,8 +5,9 @@ import ioHandlers.ProgramPrinter;
 public class DownloadStatus {
 
     private long totalFileSize;
-    private long completedBytes = 0;
+    private long totalCompletedBytes = 0;
     private int shownPercentage = 0;
+    private boolean isCompleted = false;
 
     /**
      * A status object to represent the download status at any given time, and handle the
@@ -15,20 +16,22 @@ public class DownloadStatus {
      */
     public DownloadStatus(long totalFileSize) {
         this.totalFileSize = totalFileSize;
-        recoverDownloadStatus();
         ProgramPrinter.printDownloadPercentage(shownPercentage);
     }
 
-    private void recoverDownloadStatus() {
-        // todo: implement so this function populates the props by the metadata file
+    public DownloadStatus(long totalFileSize, long completedBytes) {
+        this.totalFileSize = totalFileSize;
+        this.totalCompletedBytes = completedBytes;
+        ProgramPrinter.printMessage("Resuming download...\n");
+        this.updatePercentage();
     }
 
     /**
      * Increments the {@completedBytes} size by the given number.
-     * @param completedBytes - amount of completed bytes.
+     * @param chunkCompletedBytes - amount of completed bytes.
      */
-    public void addCompletedBytes(long completedBytes) {
-        this.completedBytes += completedBytes;
+    public void addCompletedBytes(long chunkCompletedBytes) {
+        this.totalCompletedBytes += chunkCompletedBytes;
         updatePercentage();
     }
 
@@ -37,14 +40,22 @@ public class DownloadStatus {
      */
     private void updatePercentage() {
         synchronized (this) {
-            double percentage = (double) completedBytes / totalFileSize;
+            double percentage = (double) totalCompletedBytes / totalFileSize;
             int newShownPercentage = (int)(percentage * 100);
 
             if (newShownPercentage > shownPercentage) {
                 shownPercentage = newShownPercentage;
                 ProgramPrinter.printDownloadPercentage(shownPercentage);
             }
+
+            if (totalCompletedBytes >= totalFileSize) {
+                isCompleted = true;
+            }
         }
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
     }
 
     /**
