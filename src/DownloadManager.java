@@ -170,8 +170,7 @@ public class DownloadManager {
      * @return a ChunkGetter obejct.
      */
     private ChunkGetter createGetter(int chunkIndex, ChunkRange range) {
-        return new ChunkGetter(
-                this.serverList.get(0), range, chunkIndex, this.chunkManager, this.chunkQueue);
+        return new ChunkGetter(serverList, range, chunkIndex, chunkManager, chunkQueue);
     }
 
     /**
