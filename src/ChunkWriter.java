@@ -5,47 +5,48 @@ public class ChunkWriter implements Runnable {
 
     private PriorityBlockingQueue<Chunk> chunkQueue;
     private ChunkManager chunkManager;
-    private String destFolder;
+    private String destinationPath;
     private MetadataManager metadataManager;
     private RandomAccessFile writer;
     private DownloadStatus downloadStatus;
 
     /**
      * Initializing the program writer thread.
-     * @param destinationFolderPath - the destination folder to save the downloaded file in.
-     * @param fileName - the downloaded file's name.
-     * @param chunkQueue - the chunk queue to take chunks from.
-     * @param chunkManager
+     * @param destinationFilePath - the path of the output file.
+     * @param chunkQueue - the chunk queue to dequeue chunks from.
+     * @param metadataManager - the metadata manager object to serialize with.
+     * @param chunkManager - the chunk manager to serialize after writing.
+     * @param downloadStatus - the download status object to update after writing.
      */
-    public ChunkWriter(String destinationFolderPath, String fileName,
-                       PriorityBlockingQueue<Chunk> chunkQueue, ChunkManager chunkManager, MetadataManager metadataManager, DownloadStatus downloadStatus) {
+    public ChunkWriter(String destinationFilePath, PriorityBlockingQueue<Chunk> chunkQueue,
+                       MetadataManager metadataManager, ChunkManager chunkManager, DownloadStatus downloadStatus) {
         this.chunkQueue = chunkQueue;
         this.chunkManager = chunkManager;
-        this.destFolder = destinationFolderPath;
+        this.destinationPath = destinationFilePath;
         this.metadataManager = metadataManager;
-        String destFilePath = this.destFolder + "/" + fileName;
-        this.initWriter(destFilePath);
         this.downloadStatus = downloadStatus;
+        initWriter(destinationFilePath);
     }
 
     /**
      * Creating a RandomAccessFile object to handle the file writing.
+     * If the output file already exists, open it and continue writing to it.
+     * Otherwise, a new file will be created.
      * @param destFilePath - the downloaded file destination path.
      */
     private void initWriter(String destFilePath) {
         File destFile = new File(destFilePath);
         try {
             if (destFile.exists()) {
-                this.writer = new RandomAccessFile(destFile, "rw");
+                writer = new RandomAccessFile(destFile, "rw");
             }
             else {
-                this.writer = new RandomAccessFile(destFilePath, "rw");
-                this.writer.setLength(0);
+                writer = new RandomAccessFile(destFilePath, "rw");
+                writer.setLength(0); // ensuring the file is empty before start writing.
             }
-            this.writer.seek(0);
         }
         catch (FileNotFoundException e) {
-            ProgramPrinter.printError("Unable to create destination file: file not found", e);
+            ProgramPrinter.printError("Unable to create destination file: invalid path.", e);
         }
         catch (IOException e) {
             ProgramPrinter.printError("Unable to write to destination file.", e);
@@ -60,10 +61,11 @@ public class ChunkWriter implements Runnable {
     @Override
     public void run() {
         Chunk c;
-        while (!this.downloadStatus.isCompleted()) {
-            c = this.chunkQueue.poll();
-            if (c != null)
+        while (!downloadStatus.isCompleted()) {
+            c = chunkQueue.poll();
+            if (c != null) {
                 writeChunkToFile(c);
+            }
         }
         handleWritingCompletion();
     }
@@ -75,9 +77,8 @@ public class ChunkWriter implements Runnable {
     private void writeChunkToFile(Chunk c) {
         synchronized (this) {
             try {
-                this.writer.seek(c.getStartPosition());
-                this.writer.write(c.getData());
-                this.downloadStatus.addCompletedBytes(c.getSize());
+                writer.seek(c.getStartPosition());
+                writer.write(c.getData());
             }
             catch (IOException e) {
                 ProgramPrinter.printError("Failed to write data portion to file.", e);
@@ -92,7 +93,9 @@ public class ChunkWriter implements Runnable {
      */
     private void flagChunkAsCompleted(Chunk c) {
         c.setStatus(true);
+        downloadStatus.addCompletedBytes(c.getSize());
         metadataManager.save(chunkManager);
+        c.clearData();
     }
 
     /**
@@ -109,7 +112,7 @@ public class ChunkWriter implements Runnable {
      */
     private void closeWriter() {
         try {
-            this.writer.close();
+            writer.close();
         }
         catch (IOException e) {
             ProgramPrinter.printError("Unable to properly close writer.", e);

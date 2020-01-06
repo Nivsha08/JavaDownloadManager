@@ -12,6 +12,7 @@ public class DownloadManager {
     private int numConnections;
     private long fileSize;
     private ArrayList<String> serverList;
+
     private ThreadPoolExecutor threadPool;
     private MetadataManager metadataManager;
     private ChunkManager chunkManager;
@@ -23,15 +24,14 @@ public class DownloadManager {
      * Creates the download manager object.
      */
     public DownloadManager(ProgramInput userInput) {
-        populateProperties(userInput);
-        metadataManager = new MetadataManager(fileName, fileSize);
+        storeUserInput(userInput);
     }
 
     /**
-     * Populate download manager fields by the user input.
+     * Populate the object fields with the parameters given by the user.
      * @param userInput
      */
-    private void populateProperties(ProgramInput userInput) {
+    private void storeUserInput(ProgramInput userInput) {
         serverList = userInput.getServerList();
         numConnections = userInput.getMaxConnections();
         fileName = userInput.getFileName();
@@ -45,9 +45,9 @@ public class DownloadManager {
      */
     private long getFileSize() {
         long fileSize = 0;
+        String serverAddress = serverList.get(0);
         try {
-            URL url = new URL(this.serverList.get(0));
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) (new URL(serverAddress)).openConnection();
             connection.setRequestMethod(HEAD_REQUEST_METHOD);
             fileSize = connection.getContentLength();
             connection.disconnect();
@@ -58,7 +58,6 @@ public class DownloadManager {
         catch (IOException e) {
             ProgramPrinter.printError("Unable to get the total size of the source file.", e);
         }
-
         return fileSize;
     }
 
@@ -80,15 +79,24 @@ public class DownloadManager {
     }
 
     /**
-     * Initialize the object managing the different download parts.
+     * Activates the objects responsible for different parts of the download process,
+     * then wait for the termination of all active connections.
      */
     private void initDownload() {
+        initMetadataManager();
         initChunkManager(this.fileSize);
         initDownloadStatus();
         initChunkQueue();
         initChunkWriter();
         initChunkGetters();
         waitForCompletionAndCloseConnections();
+    }
+
+    /**
+     * Initialize the object managing the download metadata writing and loading.
+     */
+    private void initMetadataManager() {
+        metadataManager = new MetadataManager(fileName, fileSize);
     }
 
     /**
@@ -126,18 +134,18 @@ public class DownloadManager {
     }
 
     /**
-     * Initialize a ChunkWriter object to register to the queue.
+     * Initialize a ChunkWriter object to register to the queue and starts it.
      */
     private void initChunkWriter() {
         String currentDirPath = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
-        chunkWriter = new ChunkWriter(
-                currentDirPath, fileName, chunkQueue, chunkManager, metadataManager, downloadStatus);
-        Thread writerThread = new Thread(chunkWriter);
-        writerThread.start();
+        String destinationFilePath = String.format("%s/%s", currentDirPath, fileName);
+
+        chunkWriter = new ChunkWriter(destinationFilePath, chunkQueue, metadataManager, chunkManager, downloadStatus);
+        (new Thread(chunkWriter)).start();
     }
 
     /**
-     * Initializing the required number of connections and start downloading the file.
+     * Creates and runs a ChunkGetter object for each Chunk not yet downloaded.
      */
     private void initChunkGetters() {
         int chunkCount = chunkManager.getChunksCount();
@@ -151,27 +159,27 @@ public class DownloadManager {
     }
 
     /**
-     * Calculate the range for the current chunk to download from the source file.
+     * Determine the range for the current Chunk to download from the source file.
      * @param chunkIndex - the chunk's index in the source file.
      * @param chunkCount - the total chunk count.
      * @return ChunkRange object.
      */
     private ChunkRange calculateChunkByteRange(int chunkIndex, int chunkCount) {
-        return new ChunkRange(chunkIndex, this.fileSize, chunkCount);
+        return new ChunkRange(chunkIndex, fileSize, chunkCount);
     }
 
     /**
-     * Creates a ChunkGetter object responsible for
-     * downloading chunk number <chunkIndex>.
+     * Creates a ChunkGetter object responsible for downloading chunk number <chunkIndex>.
      * @param chunkIndex - the number of chunk to be downloaded from the file.
-     * @return a ChunkGetter obejct.
+     * @param range - a ChunkRange object indicating the range to be downloaded by the given chunk.
+     * @return a ChunkGetter object.
      */
     private ChunkGetter createGetter(int chunkIndex, ChunkRange range) {
         return new ChunkGetter(serverList, range, chunkIndex, chunkManager, chunkQueue);
     }
 
     /**
-     * Kill all existing connection and terminate the download manager execution.
+     * Blocks until all the active threads handled by {@threadpool} are done running.
      */
     private void waitForCompletionAndCloseConnections() {
         threadPool.shutdown();

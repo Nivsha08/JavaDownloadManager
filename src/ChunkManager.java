@@ -15,14 +15,41 @@ public class ChunkManager implements Serializable {
         this.chunkTable = new Chunk[tableSize];
     }
 
-    public ChunkManager(MinifiedChunkTable minified) {
-        this.chunkTable = new Chunk[minified.getChunkCount()];
-        for (int i = 0; i < minified.getChunkCount(); i++) {
-            boolean chunkStatus = minified.getElementAt(i);
+    /**
+     * Creates an array of Chunks from a loaded MinifiedChunkTable object. The method will
+     * create a completed Chunk object for each Chunk marked as completed in the minified table.
+     * @param minifiedTable
+     */
+    public ChunkManager(MinifiedChunkTable minifiedTable) {
+        this.chunkTable = new Chunk[minifiedTable.getChunkCount()];
+        for (int i = 0; i < minifiedTable.getChunkCount(); i++) {
+            boolean chunkStatus = minifiedTable.getElementAt(i);
             if (chunkStatus) {
-                this.setChunkAt(i, new Chunk(i, chunkStatus));
+                this.setChunkAt(i, new Chunk(i, true));
             }
         }
+    }
+
+    /**
+     * @returns an integer array containing all the IDs (indices) of the completed Chunks.
+     */
+    public int[] getCompletedChunksIDs() {
+        List<Integer> completedIDs = new ArrayList<>();
+        for (int i = 0; i < chunkTable.length; i++) {
+            if (chunkTable[i] != null) completedIDs.add(i);
+        }
+        return completedIDs.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /**
+     * @returns an integer array containing all the IDs (indices) of the Chunks which are yet to be downloaded.
+     */
+    public int[] getRemainingChunkIDs() {
+        List<Integer> remainingIDs = new ArrayList<>();
+        for (int i = 0; i < chunkTable.length; i++) {
+            if (chunkTable[i] == null) remainingIDs.add(i);
+        }
+        return remainingIDs.stream().mapToInt(Integer::intValue).toArray();
     }
 
     /* GETTERS & SETTERS */
@@ -37,32 +64,6 @@ public class ChunkManager implements Serializable {
 
     public void setChunkAt(int index, Chunk newChunk) {
         chunkTable[index] = newChunk;
-    }
-
-    public int[] getCompletedChunksIDs() {
-        List<Integer> completedIDs = new ArrayList<>();
-        for (int i = 0; i < chunkTable.length; i++) {
-            if (chunkTable[i] != null) completedIDs.add(i);
-        }
-        return completedIDs.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    public int[] getRemainingChunkIDs() {
-        List<Integer> remainingIDs = new ArrayList<>();
-        for (int i = 0; i < chunkTable.length; i++) {
-            if (chunkTable[i] == null) remainingIDs.add(i);
-        }
-        return remainingIDs.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    public String showData() {
-        StringBuilder str = new StringBuilder();
-        for (Chunk c : chunkTable) {
-            if (c != null) {
-                str.append(String.format("Chunk\t%d:\t%s\n", c.getID(), c.isCompleted()));
-            }
-        }
-        return str.toString();
     }
 
 }

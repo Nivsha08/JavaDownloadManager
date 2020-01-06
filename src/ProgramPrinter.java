@@ -3,7 +3,7 @@
  */
 public class ProgramPrinter {
 
-    private static final String MESSAGE_DIVIDER = "-----------------------";
+    private static final String MESSAGE_DIVIDER = "-------------------------------";
 
     public static void printMessage(String message) {
         System.err.println(message);

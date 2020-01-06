@@ -5,7 +5,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 
 public class ChunkGetter implements Runnable {
 
-    private final int BYTE_BUFFER_SIZE = 4096; // byte buffer size used when reading content
+    private final int BYTE_BUFFER_SIZE = 4096; // buffer size (in bytes) used when reading a range content
     private final String REQUEST_TYPE = "Range"; // HTTP range request method name
 
     private int chunkIndex;
@@ -21,7 +21,7 @@ public class ChunkGetter implements Runnable {
      * @param range - ChunkRange object to hold the download range for this getter.
      * @param chunkIndex - the index of the chunk to be downloaded by this getter.
      * @param chunkManager - reference to object tracking the chunk downloaded.
-     * @param chunkQueue - reference to synchronous queue handling completed chunks.
+     * @param chunkQueue - reference to priority queue handling chunks waiting to be written to disk.
      */
     public ChunkGetter(List<String> serverList, ChunkRange range, int chunkIndex,
                        ChunkManager chunkManager, PriorityBlockingQueue<Chunk> chunkQueue) {
@@ -38,10 +38,21 @@ public class ChunkGetter implements Runnable {
     @Override
     public void run() {
         int threadID = (int)Thread.currentThread().getId();
-        serverAddress =  serverList.get((threadID % serverList.size()));
-        HttpURLConnection connection = this.initConnection();
-        byte[] downloadedData = this.downloadChunk(connection);
-        this.saveDownloadedData(downloadedData);
+        serverAddress =  calculateThreadServerAddress(threadID, serverList);
+        HttpURLConnection connection = initConnection();
+        byte[] downloadedData = downloadChunk(connection);
+        saveDownloadedData(downloadedData);
+    }
+
+    /**
+     * Determines to which server the given thread will connect.
+     * @param threadID
+     * @param serverList
+     * @returns the server address' index in the server list.
+     */
+    private String calculateThreadServerAddress(int threadID, List<String> serverList) {
+        int serverAddressIndex = threadID % serverList.size();
+        return serverList.get(serverAddressIndex);
     }
 
     /**
@@ -82,14 +93,13 @@ public class ChunkGetter implements Runnable {
         finally {
             connection.disconnect();
         }
-
         return null;
     }
 
     /**
      * Reads the entire Http range into a byte array from the given input stream.
      * @param connectionInputStream - the file's input stream.
-     * @return a byte array with the downloaded data.
+     * @returns a byte array with the downloaded data.
      */
     private byte[] readByteRange(InputStream connectionInputStream) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -104,27 +114,19 @@ public class ChunkGetter implements Runnable {
         catch (IOException e) {
             ProgramPrinter.printError("Failed to read from the source file.", e);
         }
-
         return out.toByteArray();
     }
 
     /**
      * Creates a new Chunk object with the given downloaded data,
      * stores it at the chunks table in the correct index, and adding it
-     * to the queue of the chunks waiting to be written to file.
+     * to the queue of the chunks waiting to be written to disk.
      * @param downloadedData - the data downloaded by this getters.
      */
     private void saveDownloadedData(byte[] downloadedData) {
-        try {
-            Chunk c = new Chunk(chunkIndex, downloadedData, this.range);
-            this.chunkManager.setChunkAt(this.chunkIndex, c);
-            this.chunkQueue.put(c);
-            Thread.sleep(200); //todo: document
-        }
-        catch (InterruptedException e) {
-            ProgramPrinter.printError(
-                    "Failed to store a portion of the data downloaded from the source file.", e);
-        }
+        Chunk c = new Chunk(chunkIndex, downloadedData, this.range);
+        this.chunkManager.setChunkAt(this.chunkIndex, c);
+        this.chunkQueue.put(c);
     }
 
 }

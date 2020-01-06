@@ -6,20 +6,25 @@ public class DownloadStatus {
     private boolean isCompleted = false;
 
     /**
-     * A status object to represent the download status at any given time, and handle the
+     * Creates a status object to represent the download status at any given time, and handle the
      * user output regarding the download progress.
-     * @param totalFileSize
+     * @param totalFileSize - the total file size in bytes.
      */
     public DownloadStatus(long totalFileSize) {
         this.totalFileSize = totalFileSize;
         ProgramPrinter.printDownloadPercentage(shownPercentage);
     }
 
+    /**
+     * Creates a object to represent a resumed download status, after completing <completedByes> bytes.
+     * @param totalFileSize - the total file size in bytes.
+     * @param completedBytes - the total downloaded bytes completed so far.
+     */
     public DownloadStatus(long totalFileSize, long completedBytes) {
         this.totalFileSize = totalFileSize;
         this.totalCompletedBytes = completedBytes;
         ProgramPrinter.printMessage("Resuming download...\n");
-        this.updatePercentage();
+        updatePercentage();
     }
 
     /**
@@ -27,7 +32,7 @@ public class DownloadStatus {
      * @param chunkCompletedBytes - amount of completed bytes.
      */
     public void addCompletedBytes(long chunkCompletedBytes) {
-        this.totalCompletedBytes += chunkCompletedBytes;
+        totalCompletedBytes += chunkCompletedBytes;
         updatePercentage();
     }
 
@@ -50,15 +55,17 @@ public class DownloadStatus {
         }
     }
 
-    public boolean isCompleted() {
-        return isCompleted;
-    }
-
     /**
      * Show a success message when the progress is complete.
      */
     public void handleDownloadSuccess() {
         ProgramPrinter.printSuccessMessage();
+    }
+
+    /* GETTERS & SETTERS */
+
+    public boolean isCompleted() {
+        return isCompleted;
     }
 
 
