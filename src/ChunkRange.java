@@ -1,7 +1,4 @@
-import java.io.Serializable;
-import java.util.Locale;
-
-public class ChunkRange implements Serializable {
+public class ChunkRange {
 
     private static final String BYTES_RANGE_FORMAT = "bytes=%d-%d"; // the HTTP Range request string format.
 

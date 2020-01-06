@@ -1,6 +1,4 @@
-import java.io.Serializable;
-
-public class Chunk implements Comparable<Chunk>, Serializable {
+public class Chunk implements Comparable<Chunk> {
 
     public static final int CHUNK_SIZE = 128000; // chunk size in bytes
     private int chunkID;

@@ -18,7 +18,6 @@ public class UserInputHandler {
         if (args.length > 1) {
             maxConnection = Integer.parseInt(args[1]);
         }
-
         return new ProgramInput(serverList, maxConnection);
     }
 
@@ -32,14 +31,12 @@ public class UserInputHandler {
     private static ArrayList<String> getServerAddresses(String address) {
         ArrayList<String> result = new ArrayList<>();
         boolean isURL = address.matches("^(?:http(s)?).*");
-
         if (isURL) {
             result.add(address);
         }
         else {
             result = readServerList(address);
         }
-
         return result;
     }
 
@@ -52,7 +49,6 @@ public class UserInputHandler {
     private static ArrayList<String> readServerList(String filePath) {
         String serverURL = "";
         ArrayList<String> result = new ArrayList<>();
-
         try (BufferedReader fileReader = new BufferedReader(new FileReader(filePath))) {
             while ((serverURL = fileReader.readLine()) != null) {
                 result.add(serverURL);
@@ -61,7 +57,6 @@ public class UserInputHandler {
         catch (IOException e) {
             ProgramPrinter.printError("Unable to read server list file.", e);
         }
-
         return result;
     }
 }

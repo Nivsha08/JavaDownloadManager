@@ -33,4 +33,5 @@ public class ProgramPrinter {
         printMessage(String.format("%s\nDownload succeeded !\n%s",
                 MESSAGE_DIVIDER, MESSAGE_DIVIDER));
     }
+
 }

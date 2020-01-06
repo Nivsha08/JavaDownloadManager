@@ -1,8 +1,7 @@
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChunkManager implements Serializable {
+public class ChunkManager {
 
     private Chunk[] chunkTable;
 

@@ -7,19 +7,19 @@ public class ProgramInput {
     private String fileName;
 
     /**
-     * An compound object contains the parsed user arguments.
+     * A compound object contains the parsed user arguments.
      * @param serverList
      * @param maxConnections
      */
     public ProgramInput(ArrayList<String> serverList, int maxConnections) {
         this.serverList = serverList;
         this.maxConnections = maxConnections;
-        this.fileName = this.parseFileName();
+        this.fileName = parseFileName();
     }
 
     /**
-     * Parse the user input to
-     * @return
+     * Parse the user input to extract the source file name from the server address path.
+     * @returns the source file name.
      */
     private String parseFileName() {
         int lastBackslashPos = serverList.get(0).lastIndexOf('/');
@@ -39,17 +39,5 @@ public class ProgramInput {
     public String getFileName() {
         return fileName;
     }
-
-    public String toString() {
-        StringBuilder output = new StringBuilder();
-
-        for (String serverURL : this.serverList) {
-            output.append(serverURL + "\n");
-        }
-
-        output.append("Max connections: " + this.maxConnections + '\n');
-
-        return output.toString();
-    }
-
+    
 }
