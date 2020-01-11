@@ -165,6 +165,7 @@ public class DownloadManager {
 
     /**
      * Determine the range for the current Chunk to download from the source file.
+     * Each Chunk will download a unique range (as chunk indices are distinct).
      * @param chunkIndex - the chunk's index in the source file.
      * @param chunkCount - the total chunk count.
      * @return ChunkRange object.
