@@ -1,9 +1,9 @@
-----------------------
-Anat Balzam 205387954
-Niv Shani 311361661
-----------------------
+---
+###### Anat Balzam 205387954
+###### Niv Shani 311361661
+---
 
-Submitted classes:
+### Submitted classes:
 
 1. IdcDM - program entry point, containing the main method.
 2. UserInputHandler - handles the user terminal arguments parsing.
@@ -19,4 +19,4 @@ Submitted classes:
 12. ChunkManager - an object to keep track of references to the downloaded chunks, to be minified and serialized to the metadata file.
 13. MinifiedChunkTable - a minified representation of the ChunkManager's table, resulting in a bitmap of the completed chunks.
 
-----------------------
+---
