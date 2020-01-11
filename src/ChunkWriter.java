@@ -83,6 +83,9 @@ public class ChunkWriter implements Runnable {
             catch (IOException e) {
                 ProgramPrinter.printError("Failed to write data portion to file.", e);
             }
+            catch (NullPointerException e) {
+                // suppressing errors in case of corrupted Chunk (occurs in case of connectivity I/O error)
+            }
             flagChunkAsCompleted(c);
         }
     }
@@ -92,10 +95,15 @@ public class ChunkWriter implements Runnable {
      * @param c - the completed Chunk.
      */
     private void flagChunkAsCompleted(Chunk c) {
-        c.setStatus(true);
-        downloadStatus.addCompletedBytes(c.getSize());
-        metadataManager.save(chunkManager);
-        c.clearData();
+        try {
+            c.setStatus(true);
+            downloadStatus.addCompletedBytes(c.getSize());
+            metadataManager.save(chunkManager);
+            c.clearData();
+        }
+        catch (NullPointerException e) {
+            // suppressing errors in case of corrupted Chunk (occurs in case of connectivity I/O error)
+        }
     }
 
     /**

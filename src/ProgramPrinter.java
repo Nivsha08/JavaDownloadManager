@@ -10,13 +10,13 @@ public class ProgramPrinter {
     }
 
     public static void printError(String errorMessage) {
-        printMessage("Download Failed.");
         printMessage(errorMessage);
+        printMessage("Download Failed.");
     }
 
     public static void printError(String errorMessage, Exception e) {
-        printMessage("Download Failed.");
         printMessage(String.format("%s\n%s", errorMessage, e.getLocalizedMessage()));
+        printMessage("Download Failed.");
     }
 
     public static void printDownloadPercentage(int progressPercentage) {
@@ -30,7 +30,7 @@ public class ProgramPrinter {
     }
 
     public static void printSuccessMessage() {
-        printMessage(String.format("%s\nDownload succeeded !\n%s",
+        printMessage(String.format("%s\nDownload succeeded\n%s",
                 MESSAGE_DIVIDER, MESSAGE_DIVIDER));
     }
 

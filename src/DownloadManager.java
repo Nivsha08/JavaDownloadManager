@@ -50,7 +50,6 @@ public class DownloadManager {
             HttpURLConnection connection = (HttpURLConnection) (new URL(serverAddress)).openConnection();
             connection.setRequestMethod(HEAD_REQUEST_METHOD);
             fileSize = connection.getContentLength();
-            connection.disconnect();
         }
         catch (MalformedURLException e) {
             ProgramPrinter.printError("Invalid URL address given as input.", e);
@@ -62,12 +61,18 @@ public class DownloadManager {
     }
 
     /**
-     * Download manager entry point to start the download process.
+     * Download manager entry point to start the download process, if possible.
+     * Negative file size indicates connection establishment error.
      */
     public void startDownload() {
-        ProgramPrinter.printInitMessage(fileName, serverList.size(), numConnections);
-        initThreads(numConnections);
-        initDownload();
+        if (fileSize < 0) {
+            ProgramPrinter.printError("No internet connection.");
+        }
+        else {
+            ProgramPrinter.printInitMessage(fileName, serverList.size(), numConnections);
+            initThreads(numConnections);
+            initDownload();
+        }
     }
 
     /**
@@ -175,7 +180,7 @@ public class DownloadManager {
      * @return a ChunkGetter object.
      */
     private ChunkGetter createGetter(int chunkIndex, ChunkRange range) {
-        return new ChunkGetter(serverList, range, chunkIndex, chunkManager, chunkQueue);
+        return new ChunkGetter(serverList, range, chunkIndex, chunkManager, chunkQueue, this);
     }
 
     /**
@@ -188,6 +193,16 @@ public class DownloadManager {
         }
         catch (InterruptedException e) {
             ProgramPrinter.printError("Some connections were interrupted.", e);
+        }
+    }
+
+    /**
+     * Interrupt the download process due to connectivity issues, and abrupt the program run.
+     */
+    public void interruptDownload() {
+        synchronized (this) {
+            ProgramPrinter.printError("No internet connection.");
+            System.exit(-1);
         }
     }
 

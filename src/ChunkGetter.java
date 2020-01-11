@@ -6,6 +6,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 public class ChunkGetter implements Runnable {
 
     private final int BYTE_BUFFER_SIZE = 4096; // buffer size (in bytes) used when reading a range content
+    private final int CONNECTION_TIMEOUT = 2000; // max wait time (in ms) for trying to connect/read to/from a the server
     private final String REQUEST_TYPE = "Range"; // HTTP range request method name
 
     private int chunkIndex;
@@ -14,22 +15,26 @@ public class ChunkGetter implements Runnable {
     private ChunkRange range;
     private ChunkManager chunkManager;
     private PriorityBlockingQueue<Chunk> chunkQueue;
+    private DownloadManager downloadManager;
 
     /**
      * Initializes a HTTP getters object.
      * @param serverList - the servers list of address.
      * @param range - ChunkRange object to hold the download range for this getter.
      * @param chunkIndex - the index of the chunk to be downloaded by this getter.
-     * @param chunkManager - reference to object tracking the chunk downloaded.
-     * @param chunkQueue - reference to priority queue handling chunks waiting to be written to disk.
+     * @param chunkManager - a reference to object tracking the chunk downloaded.
+     * @param chunkQueue - a reference to priority queue handling chunks waiting to be written to disk.
+     * @param downloadManager - a reference to the download manager object.
      */
     public ChunkGetter(List<String> serverList, ChunkRange range, int chunkIndex,
-                       ChunkManager chunkManager, PriorityBlockingQueue<Chunk> chunkQueue) {
+                       ChunkManager chunkManager, PriorityBlockingQueue<Chunk> chunkQueue,
+                       DownloadManager downloadManager) {
         this.serverList = serverList;
         this.chunkIndex = chunkIndex;
         this.range = range;
         this.chunkManager = chunkManager;
         this.chunkQueue = chunkQueue;
+        this.downloadManager = downloadManager;
     }
 
     /**
@@ -64,12 +69,15 @@ public class ChunkGetter implements Runnable {
         try {
             URL url = new URL(this.serverAddress);
             connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(CONNECTION_TIMEOUT);
+            connection.setReadTimeout(CONNECTION_TIMEOUT);
         }
         catch (MalformedURLException e) {
             ProgramPrinter.printError("Invalid URL address given as input.", e);
         }
         catch (IOException e) {
-            ProgramPrinter.printError("Unable to establish the URL connection.", e);
+            // suppressing connection or network interruptions errors and terminating the program
+            downloadManager.interruptDownload();
         }
         return connection;
     }
@@ -88,7 +96,8 @@ public class ChunkGetter implements Runnable {
             return this.readByteRange(connectionInputStream);
         }
         catch (IOException e) {
-            ProgramPrinter.printError("Failed to read the source file input stream.", e);
+            // suppressing connection or network interruptions errors and terminating the program
+            downloadManager.interruptDownload();
         }
         finally {
             connection.disconnect();
@@ -112,7 +121,8 @@ public class ChunkGetter implements Runnable {
             }
         }
         catch (IOException e) {
-            ProgramPrinter.printError("Failed to read from the source file.", e);
+            // suppressing connection or network interruptions errors and terminating the program
+            downloadManager.interruptDownload();
         }
         return out.toByteArray();
     }
